@@ -53,7 +53,8 @@
                     "rseqc/junctionsaturation": {
                         "branch": "master",
                         "git_sha": "0145202ae8a9f39a4e7c533f667c38989af799b2",
-                        "installed_by": ["modules"]
+                        "installed_by": ["modules"],
+                        "patch": "modules/nf-core/rseqc/junctionsaturation/rseqc-junctionsaturation.diff"
                     },
                     "rseqc/readdistribution": {
                         "branch": "master",

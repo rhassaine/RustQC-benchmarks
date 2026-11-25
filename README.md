@@ -27,7 +27,7 @@ All upstream tools are run via standard [nf-core modules](https://nf-co.re/modul
 | read_duplication    | [RSeQC read_duplication.py](http://rseqc.sourceforge.net/)               | TSV exact match                    |
 | read_distribution   | [RSeQC read_distribution.py](http://rseqc.sourceforge.net/)              | TSV match, 0.5 relative tolerance  |
 | junction_annotation | [RSeQC junction_annotation.py](http://rseqc.sourceforge.net/)            | Row-sorted TSV + BED comparison    |
-| junction_saturation | [RSeQC junction_saturation.py](http://rseqc.sourceforge.net/)            | Structural check (stochastic tool) |
+| junction_saturation | [RSeQC junction_saturation.py](http://rseqc.sourceforge.net/)            | md5 (seeded R script)              |
 | inner_distance      | [RSeQC inner_distance.py](http://rseqc.sourceforge.net/)                 | TSV match, 0.1 relative tolerance  |
 | qualimap            | [Qualimap rnaseq](http://qualimap.conesalab.org/)                        | _comparison TBD_                   |
 | preseq              | [preseq lc_extrap](http://smithlabresearch.org/software/preseq/)         | _comparison TBD_                   |

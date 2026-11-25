@@ -178,7 +178,7 @@ tolerance.
 | **read_distribution**      | `snapshot(lines)`              | `textMatch`, exact                                                                  | Identical line for line; trailing whitespace was stripped from the reference, and `textMatch` trims lines   |
 | **inner_distance**         | `snapshot({distance, freq})`   | **md5** (both files)                                                                | Byte-identical, row order included                                                                          |
 | **junction_annotation**    | `snapshot({bed sorted, xls})`  | **md5** (BED, XLS) + `textMatch` (Interact BED, log)                                | BED/XLS byte-identical; Interact BED and log identical except lines naming the input BAM / annotation       |
-| **junction_saturation**    | `snapshot(lines)`              | Exact: `x` array, 100% points, `z == y + w`, all other lines                        | Intermediate subsample points use different random streams (up to 17.5% apart), so they are not compared    |
+| **junction_saturation**    | `snapshot(lines)`              | **md5** (R script)                                                                  | Byte-identical at every sampling point (seed 1: patched RSeQC module, `--junction-saturation-seed 1`)       |
 | **dupradar**               | `snapshot({matrix, slope})`    | **md5** (matrix) + intercept/slope at 1e-7 relative                                 | Matrix byte-identical (all 14 columns); intercept/slope agree to ~2.6e-9 relative                           |
 | **featurecounts**          | `snapshot({counts, summary})`  | Exact biotype counts + **md5** (biotype summary)                                    | All 14 biotypes identical; biotype-level summary byte-identical to `-g gene_biotype`                        |
 | **featurecounts per-gene** | (shared with featurecounts)    | `tsvMatch` exact (Geneid, Length, count), exons as sorted sets, **md5** (summary)   | 0 / 2,905 counts differ. KNOWN DISCREPANCY (cosmetic): RustQC lists exons in GTF order, Subread by position |
@@ -192,10 +192,9 @@ Comparisons fall into three categories:
 
 1. **Byte-identical** (md5): `bam_stat`, `infer_experiment`, `flagstat`, `idxstats`, `read_duplication`,
    `inner_distance`, `junction_annotation` (BED/XLS), `dupradar` (matrix), `featurecounts` (summaries),
-   `qualimap` (coverage profiles), `preseq` (Linux only).
+   `qualimap` (coverage profiles), `preseq` (Linux only), `junction_saturation` (seeded).
 2. **Exact after excluding non-data lines**: `samtools stats` (`#` comments), `read_distribution` (trailing
-   whitespace), `junction_annotation` (Interact BED header, log annotation line), `junction_saturation` (all
-   deterministic values; random intermediate subsample points are skipped), `featurecounts` biotype and
+   whitespace), `junction_annotation` (Interact BED header, log annotation line), `featurecounts` biotype and
    per-gene counts. `dupradar` intercept/slope are compared at 1e-7 relative, which only absorbs
    floating-point differences between RustQC's fit and R's `glm()`.
 3. **Known discrepancies** (measured allowance just above the observed gap, so any further drift fails):
