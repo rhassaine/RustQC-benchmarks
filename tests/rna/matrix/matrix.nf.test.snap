@@ -158,13 +158,13 @@
                     "matrix_md5": "54d4ac2c164fd2329821286fb27babdf",
                     "genes": 2392,
                     "slope": [
-                        "hs_chrX_pe_unstr - dupRadar Int (duprate at low read counts): 2.90070146547931e-12 ",
+                        "hs_chrX_pe_unstr - dupRadar Int (duprate at low read counts): 2.9007014654788e-12 ",
                         "hs_chrX_pe_unstr - dupRadar Sl (progression of the duplication rate): 1"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:24:25.912409061",
+        "timestamp": "2026-11-25T17:06:14.871808469",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -330,13 +330,13 @@
                     "matrix_md5": "4cd083a8144215f9d80c34d3841bde36",
                     "genes": 125,
                     "slope": [
-                        "sc_pe_rev - dupRadar Int (duprate at low read counts): 2.90070146547718e-12 ",
-                        "sc_pe_rev - dupRadar Sl (progression of the duplication rate): 0.999999999999998"
+                        "sc_pe_rev - dupRadar Int (duprate at low read counts): 2.90070146547694e-12 ",
+                        "sc_pe_rev - dupRadar Sl (progression of the duplication rate): 1"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:24:01.241593091",
+        "timestamp": "2026-11-25T17:05:55.275270873",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -696,13 +696,13 @@
                     "matrix_md5": "37a6c1b6dab03647f463f6fb6bd03e6f",
                     "genes": 7,
                     "slope": [
-                        "hs_chr22_pe_fwd - dupRadar Int (duprate at low read counts): 5.82621463930815e-11 ",
-                        "hs_chr22_pe_fwd - dupRadar Sl (progression of the duplication rate): 0.999999999999989"
+                        "hs_chr22_pe_fwd - dupRadar Int (duprate at low read counts): 5.82621463930829e-11 ",
+                        "hs_chr22_pe_fwd - dupRadar Sl (progression of the duplication rate): 0.999999999999987"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:23:48.597237769",
+        "timestamp": "2026-11-25T17:05:44.590298655",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -1060,13 +1060,13 @@
                     "matrix_md5": "2c2b295075e7c1aa01638c560b82a18a",
                     "genes": 1923,
                     "slope": [
-                        "hs_ribo_chr19_22_se_fwd - dupRadar Int (duprate at low read counts): 2.90070146548158e-12 ",
-                        "hs_ribo_chr19_22_se_fwd - dupRadar Sl (progression of the duplication rate): 0.999999999999963"
+                        "hs_ribo_chr19_22_se_fwd - dupRadar Int (duprate at low read counts): 2.9007014654792e-12 ",
+                        "hs_ribo_chr19_22_se_fwd - dupRadar Sl (progression of the duplication rate): 0.999999999999983"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:24:16.290058697",
+        "timestamp": "2026-11-25T17:06:07.947167322",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -1231,13 +1231,13 @@
                     "matrix_md5": "75a2f2dcd37628013e29f3262684c195",
                     "genes": 1510,
                     "slope": [
-                        "hs_ribo_chr20_se_fwd - dupRadar Int (duprate at low read counts): 2.90070146547728e-12 ",
+                        "hs_ribo_chr20_se_fwd - dupRadar Int (duprate at low read counts): 2.90070146547283e-12 ",
                         "hs_ribo_chr20_se_fwd - dupRadar Sl (progression of the duplication rate): 1"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:24:36.748278456",
+        "timestamp": "2026-11-25T17:06:22.364780986",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -1403,13 +1403,13 @@
                     "matrix_md5": "0b4aafa812ef154a2409b3e0acfebada",
                     "genes": 125,
                     "slope": [
-                        "sc_se_rev - dupRadar Int (duprate at low read counts): 2.90070146547684e-12 ",
-                        "sc_se_rev - dupRadar Sl (progression of the duplication rate): 0.999999999999994"
+                        "sc_se_rev - dupRadar Int (duprate at low read counts): 2.9007014654769e-12 ",
+                        "sc_se_rev - dupRadar Sl (progression of the duplication rate): 0.999999999999997"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:24:07.283570715",
+        "timestamp": "2026-11-25T17:06:00.592287866",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
@@ -1574,13 +1574,13 @@
                     "matrix_md5": "7c9d83da69342434ec6c097ab53001a5",
                     "genes": 82,
                     "slope": [
-                        "hs_chrXsub_pe_unstr - dupRadar Int (duprate at low read counts): 2.90070146547681e-12 ",
-                        "hs_chrXsub_pe_unstr - dupRadar Sl (progression of the duplication rate): 1"
+                        "hs_chrXsub_pe_unstr - dupRadar Int (duprate at low read counts): 2.90070146547684e-12 ",
+                        "hs_chrXsub_pe_unstr - dupRadar Sl (progression of the duplication rate): 0.999999999999999"
                     ]
                 }
             }
         ],
-        "timestamp": "2026-11-25T14:23:55.086965228",
+        "timestamp": "2026-11-25T17:05:50.128407586",
         "meta": {
             "nf-test": "0.9.5",
             "nextflow": "26.10.7"
