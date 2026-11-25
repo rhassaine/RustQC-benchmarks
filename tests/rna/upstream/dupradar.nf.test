@@ -39,9 +39,12 @@ nextflow_process {
             assert path(process.out.boxplot[0][1]).exists()
             assert path(process.out.hist[0][1]).exists()
 
-            // intercept/slope at full R precision. Exact: OpenBLAS is pinned to its generic
-            // kernels (conf/modules.config), so the fit no longer depends on the runner's CPU.
-            // Snapshot data files
+            // Check the original output bytes, including R's trailing space and newlines.
+            def upstreamDir = "${projectDir}/snapshots/rna/small/dupradar"
+            assert path(dupMatrix).md5 == path("${upstreamDir}/dupMatrix.txt").md5
+            assert path(interceptSlope).md5 == path("${upstreamDir}/intercept_slope.txt").md5
+
+            // Keep the readable upstream snapshot.
             snapshot(
                 "dupMatrix":      path(dupMatrix).readLines(),
                 "intercept_slope": path(interceptSlope).readLines()
