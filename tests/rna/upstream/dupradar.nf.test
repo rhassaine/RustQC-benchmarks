@@ -15,7 +15,7 @@ nextflow_process {
             process {
                 """
                 input[0] = Channel.of([
-                    [ id: 'test', single_end: false, strandedness: 'unstranded' ],
+                    [ id: 'test', single_end: false, strandedness: 'reverse' ],
                     file("${projectDir}/test-data/rna/small/test.bam", checkIfExists: true)
                 ])
                 input[1] = Channel.of([
@@ -39,6 +39,8 @@ nextflow_process {
             assert path(process.out.boxplot[0][1]).exists()
             assert path(process.out.hist[0][1]).exists()
 
+            // intercept/slope at full R precision. Exact: OpenBLAS is pinned to its generic
+            // kernels (conf/modules.config), so the fit no longer depends on the runner's CPU.
             // Snapshot data files
             snapshot(
                 "dupMatrix":      path(dupMatrix).readLines(),

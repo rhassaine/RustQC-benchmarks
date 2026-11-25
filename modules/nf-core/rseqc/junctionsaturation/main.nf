@@ -22,8 +22,11 @@ process RSEQC_JUNCTIONSATURATION {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    // junction_saturation.py samples reads after an unseeded random.shuffle(), so its
+    // output changes between runs. Seed Python's random module to make it reproducible.
+    def seed = task.ext.seed != null ? task.ext.seed : 1
     """
-    junction_saturation.py \\
+    python3 -c "import random, runpy, shutil, sys; random.seed(${seed}); sys.argv[0] = 'junction_saturation.py'; runpy.run_path(shutil.which('junction_saturation.py'), run_name='__main__')" \\
         -i $bam \\
         -r $bed \\
         -o $prefix \\

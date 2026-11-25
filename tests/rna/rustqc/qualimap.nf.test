@@ -73,22 +73,32 @@ nextflow_process {
             assert process.success
 
             def rustqcDir = process.out.results[0][1]
-            def coverageTotal = "${rustqcDir}/qualimap/raw_data_qualimapReport/coverage_profile_along_genes_(total).txt"
-            assert path(coverageTotal).exists() : "coverage total not found in: ${rustqcDir}"
+            def resultsFile = "${rustqcDir}/qualimap/rnaseq_qc_results.txt"
+            assert path(resultsFile).exists() : "rnaseq_qc_results.txt not found in: ${rustqcDir}"
 
-            def upstreamDir = "${projectDir}/snapshots/rna/small/qualimap/raw_data_qualimapReport"
+            def upstreamDir = "${projectDir}/snapshots/rna/small/qualimap"
 
-            // Compare gene body coverage profiles (the primary qualimap output).
-            // Both produce TSV with position (0-100) and normalized coverage.
-            // Skip comment headers starting with #.
-            CompareUtils.tsvMatch(
-                path(coverageTotal).readLines(),
-                path("${upstreamDir}/coverage_profile_along_genes_(total).txt").readLines(),
-                [
-                    relTolerance: 0.05,  // 5% relative tolerance
-                    tolerance:    0.5,   // absolute tolerance for small values
-                    skipPrefixes: ['#'],
-                ]
+            // Gene body coverage profiles: measured byte-identical to Qualimap for all
+            // three expression tiers.
+            ['total', 'high', 'low'].each { tier ->
+                def name = "coverage_profile_along_genes_(${tier}).txt"
+                def actualFile = "${rustqcDir}/qualimap/raw_data_qualimapReport/${name}"
+                assert path(actualFile).exists() : "${name} not found in: ${rustqcDir}"
+                assert path(actualFile).md5 == path("${upstreamDir}/raw_data_qualimapReport/${name}").md5 : \
+                    "${name} differs from upstream Qualimap"
+            }
+
+            // rnaseq_qc_results.txt: identical to Qualimap 2.3, 5'-3' bias included, except
+            //   - "bam file =" / "gff file =", which name the inputs (upstream ran on a
+            //     name-sorted BAM and an uncompressed GTF);
+            //   - the order of junction motifs with equal percentages, which Qualimap takes
+            //     from Java HashMap iteration: each tied run is compared as a set
+            //     (ExactCompare.qualimapMotifTiesAsSets; no ties on this dataset today).
+            def results = { lines -> ExactCompare.qualimapMotifTiesAsSets('rnaseq_qc_results.txt', lines) }
+            ExactCompare.exactMatch(
+                results(path(resultsFile).readLines()),
+                results(path("${upstreamDir}/rnaseq_qc_results.txt").readLines()),
+                ['    bam file = ', '    gff file = ']
             )
         }
     }

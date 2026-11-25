@@ -98,37 +98,51 @@ nextflow_process {
 
             def upstreamDir = "${projectDir}/snapshots/rna/small/rseqc/tin"
 
-            // ── Summary comparison ──────────────────────────────────
-            // TIN involves random subsampling of coverage, so values
-            // differ slightly. Compare with 5% relative tolerance.
-            // Skip filename column (col 0) as paths differ.
+            // TIN values match RSeQC tin.py (5.0.4) exactly, up to the last binary digit,
+            // which upstream itself does not fix:
+            //   - tin.py writes transcripts in BED order, and the GTF2BED Perl script emits
+            //     transcripts with equal coordinates in Perl hash order, which changes from run
+            //     to run. So rows are compared by transcript, and the summary mean/stdev (a sum
+            //     over the rows in that order) may differ in the last digit.
+            //   - math.log/math.exp come from the platform libm (glibc picks FMA or non-FMA
+            //     code for the CPU), so a TIN value may differ by a few ulp between machines:
+            //     measured on this dataset, 1 of 8,443 values differs by 2 ulp between the
+            //     committed reference and tin.py on another CPU.
+            // Both sides are therefore compared at 1e-12 relative (about 4,500 ulp), far below
+            // any real difference; transcript IDs and coordinates must be identical.
+            def tol = 1e-12
+
+            // Summary: column 0 is the BAM file name, columns 1-3 TIN mean/median/stdev.
             CompareUtils.tsvMatch(
                 path(summaryFile).readLines(),
                 path("${upstreamDir}/test.summary.txt").readLines(),
-                [
-                    relTolerance: 0.05,
-                    tolerance:    1.0,
-                    skipColumns:  [0] as Set,  // skip Bam_file column
-                ]
+                [relTolerance: tol, skipColumns: [0] as Set, trimLines: false]
             )
 
-            // ── Per-transcript TIN comparison ───────────────────────
-            // TIN uses random subsampling of coverage, so individual
-            // transcript scores can vary significantly between implementations
-            // (up to 50%+ relative difference on individual transcripts).
-            // Instead of comparing exact values, verify that:
-            // 1. Both files have the same set of transcripts
-            // 2. Same number of rows
-            def actualLines = path(xlsFile).readLines()
+            // Per transcript, keyed by geneID: columns 0-3 (geneID, chrom, tx_start, tx_end)
+            // identical, TIN (column 4) at the tolerance above.
+            def actualLines   = path(xlsFile).readLines()
             def expectedLines = path("${upstreamDir}/test.tin.xls").readLines()
+            assert actualLines[0] == expectedLines[0] : \
+                "TIN xls header differs: '${actualLines[0]}' vs '${expectedLines[0]}'"
+            def byId = { lines -> lines.drop(1).collectEntries { line -> def c = line.split('\t', -1); [(c[0]): c] } }
+            def actualRows   = byId(actualLines)
+            def expectedRows = byId(expectedLines)
+            assert actualRows.size() == actualLines.size() - 1 : "Duplicate geneIDs in RustQC TIN xls"
+            assert actualRows.keySet() == expectedRows.keySet() : \
+                "TIN transcripts differ: ${(actualRows.keySet() - expectedRows.keySet()).size()} only in RustQC, " +
+                "${(expectedRows.keySet() - actualRows.keySet()).size()} only upstream"
 
-            assert actualLines.size() == expectedLines.size() : \
-                "TIN xls row count differs: RustQC=${actualLines.size()} upstream=${expectedLines.size()}"
-
-            def actualTranscripts   = actualLines.drop(1).collect { it.split('\t')[0] }.sort()
-            def expectedTranscripts = expectedLines.drop(1).collect { it.split('\t')[0] }.sort()
-            assert actualTranscripts == expectedTranscripts : \
-                "TIN xls transcripts differ between RustQC and upstream"
+            def rowDiffs = expectedRows.keySet().findAll { id ->
+                def a = actualRows[id], e = expectedRows[id]
+                if (a.size() != e.size() || a[0..3] != e[0..3]) return true
+                if (a[4] == e[4]) return false
+                double x = a[4] as Double, y = e[4] as Double
+                return Math.abs(x - y) > tol * Math.abs(y)
+            }
+            assert !rowDiffs : \
+                "TIN differs for ${rowDiffs.size()} transcripts, e.g. " +
+                rowDiffs.take(5).collect { "RustQC '${actualRows[it].join(' ')}' vs upstream '${expectedRows[it].join(' ')}'" }
         }
     }
 }

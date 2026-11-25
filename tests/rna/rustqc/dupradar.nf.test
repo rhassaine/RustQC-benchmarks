@@ -77,51 +77,22 @@ nextflow_process {
             assert path(matrixFile).exists() : "dupMatrix file not found in: ${rustqcDir}"
             assert path(slopeFile).exists()  : "intercept_slope file not found in: ${rustqcDir}"
 
-            // dupMatrix: compare count columns only (skip derived rate/RPKM columns)
-            // RustQC multi-mapper handling produces slightly different read counts
-            // (1-2 reads per gene). The derived rate columns (dupRate, RPK, RPKM)
-            // amplify these small count diffs into 50-100% relative errors for
-            // low-count genes, making them impractical to compare with tolerance.
-            // Columns: 0=ID, 1=geneLength, 2=allCountsMulti, 3=filteredCountsMulti,
-            //          4=dupRateMulti, 5=dupsPerIdMulti, 6=RPKMulti, 7=RPKMMulti,
-            //          8=allCounts, 9=filteredCounts, 10=dupRate, 11=dupsPerId,
-            //          12=RPK, 13=RPKM
-            // Skip rate columns 4-7 and 10-13 (derived from counts)
-            CompareUtils.tsvMatch(
-                path(matrixFile).readLines(),
-                path("${projectDir}/snapshots/rna/small/dupradar/dupMatrix.txt").readLines(),
-                [tolerance: 10.0, relTolerance: 0.02, skipColumns: [4, 5, 6, 7, 10, 11, 12, 13] as Set]
-            )
+            def upstreamDir = "${projectDir}/snapshots/rna/small/dupradar"
 
-            // intercept_slope: both tools now use the same format
-            // "test - dupRadar Int (duprate at low read counts): <value>"
-            // "test - dupRadar Sl (progression of the duplication rate): <value>"
-            // Extract numeric values and compare with tolerance
-            def actualSlope = path(slopeFile).readLines()
-            def upstreamSlope = path("${projectDir}/snapshots/rna/small/dupradar/intercept_slope.txt").readLines()
+            // dupMatrix: measured byte-identical to dupRadar, i.e. all 14 columns
+            // (counts and the derived dupRate/RPK/RPKM columns, in R's number
+            // formatting) for all 2,905 genes.
+            assert path(matrixFile).md5 == path("${upstreamDir}/dupMatrix.txt").md5 : \
+                "dupMatrix.txt differs from upstream dupRadar"
 
-            def parseSlopeFile = { lines ->
-                def vals = [:]
-                lines.each { line ->
-                    if (line.contains('Int')) vals['intercept'] = (line.split(':')[-1].trim()) as Double
-                    if (line.contains('Sl'))  vals['slope']     = (line.split(':')[-1].trim()) as Double
-                }
-                vals
-            }
-
-            def actualVals   = parseSlopeFile(actualSlope)
-            def expectedVals = parseSlopeFile(upstreamSlope)
-
-            assert actualVals.intercept != null : "No intercept in RustQC output: ${actualSlope}"
-            assert actualVals.slope != null     : "No slope in RustQC output: ${actualSlope}"
-            assert expectedVals.intercept != null : "No intercept in upstream output"
-            assert expectedVals.slope != null     : "No slope in upstream output"
-
-            // Compare with relative tolerance (count differences propagate)
-            def relDiffIntercept = Math.abs(actualVals.intercept - expectedVals.intercept) / Math.abs(expectedVals.intercept)
-            def relDiffSlope     = Math.abs(actualVals.slope - expectedVals.slope) / Math.abs(expectedVals.slope)
-            assert relDiffIntercept < 0.10 : "intercept relative diff ${relDiffIntercept} exceeds 10%"
-            assert relDiffSlope     < 0.10 : "slope relative diff ${relDiffSlope} exceeds 10%"
+            // intercept/slope: byte-identical to dupRadar (R's cat(): 15 significant
+            // digits, a space after the intercept). The upstream reference is made with
+            // OpenBLAS pinned to its generic kernels (conf/modules.config), without which its
+            // last digits depend on the CPU.
+            assert path(slopeFile).md5 == path("${upstreamDir}/intercept_slope.txt").md5 : \
+                "intercept_slope.txt differs from upstream dupRadar:\n" +
+                "  RustQC:   ${path(slopeFile).readLines()}\n" +
+                "  upstream: ${path("${upstreamDir}/intercept_slope.txt").readLines()}"
         }
     }
 }

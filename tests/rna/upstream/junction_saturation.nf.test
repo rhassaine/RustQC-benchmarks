@@ -15,7 +15,7 @@ nextflow_process {
             process {
                 """
                 input[0] = Channel.of([
-                    [ id: 'test', single_end: false, strandedness: 'unstranded' ],
+                    [ id: 'test', single_end: false, strandedness: 'reverse' ],
                     file("${projectDir}/test-data/rna/small/test.bam", checkIfExists: true),
                     file("${projectDir}/test-data/rna/small/test.bam.bai", checkIfExists: true)
                 ])
@@ -30,24 +30,15 @@ nextflow_process {
             def rscript = process.out.rscript[0][1]
             assert path(rscript).exists()
 
-            // junction_saturation.py uses random sampling, so exact values
-            // change between runs. Verify structure instead of exact content.
-            def lines = path(rscript).readLines()
-            assert lines.size() >= 10 && lines.size() <= 15 : "Expected 10-15 lines in R script, got ${lines.size()}"
-            assert lines[0].startsWith("pdf(")
-            assert lines[1].startsWith("x=c(")
-            assert lines[2].startsWith("y=c(")  // known junctions
-            assert lines[3].startsWith("z=c(")  // all junctions
-            assert lines[4].startsWith("w=c(")  // novel junctions
+            // junction_saturation.py samples reads after an unseeded random.shuffle().
+            // The patched module seeds Python's random module (random.seed(1)), so the
+            // whole R script, every sampling point included, is reproducible. It must
+            // be the reference the RustQC crosscheck compares against.
+            def reference = "${projectDir}/snapshots/rna/small/rseqc/junction_saturation/junctionSaturation_plot.r"
+            assert path(rscript).md5 == path(reference).md5 : \
+                "R script differs from the reference ${reference}"
 
-            // Snapshot for reference (will need --update-snapshot after each run)
-            snapshot(
-                "line_count": lines.size(),
-                "has_pdf_line": lines[0].contains("junctionSaturation"),
-                "has_known_junctions": lines[2].startsWith("y=c("),
-                "has_all_junctions": lines[3].startsWith("z=c("),
-                "has_novel_junctions": lines[4].startsWith("w=c("),
-            ).match("junction_saturation_output")
+            snapshot(path(rscript).readLines()).match("junction_saturation_output")
         }
     }
 }
