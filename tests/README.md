@@ -165,8 +165,7 @@ Row 42, Col 3: value 0.12345679 differs from expected 0.12345678
 
 Each crosscheck compares RustQC with the upstream tool exactly. The only allowances left are for values that
 the upstream tool itself does not reproduce to the last digit (TIN, degenerate dupRadar fits; see
-[Tolerance rationale](#tolerance-rationale)), and for orders that upstream takes from a hash table (Qualimap's tied
-junction motifs, GTF2BED's tied transcripts).
+[Tolerance rationale](#tolerance-rationale)), and for upstream GTF2BED's variable order of tied transcripts.
 
 | Tool                       | Regression method              | Crosscheck method                                                                | Measured basis / notes                                                                                 |
 | -------------------------- | ------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -184,7 +183,7 @@ junction motifs, GTF2BED's tied transcripts).
 | **featurecounts**          | `snapshot({counts, summary})`  | Exact biotype counts + **md5** (biotype summary)                                 | All 14 biotypes identical; biotype-level summary byte-identical to `-g gene_biotype`                   |
 | **featurecounts per-gene** | (shared with featurecounts)    | `exactMatch` (all but `# Program:`), **md5** (summary)                           | Identical for all 2,905 genes, per-exon Chr/Start/End/Strand lists in Subread's order included         |
 | **preseq**                 | `snapshot(lines)`              | **md5**                                                                          | Byte-identical on Linux (same C++ RNG, seed 408). Differs on macOS (libc++), so valid on Linux CI only |
-| **qualimap**               | `snapshot({total, high, low})` | **md5** (3 coverage profiles) + `exactMatch` (`rnaseq_qc_results.txt`)           | Identical, 5'-3' bias included, except the input names; tied junction motifs compared as sets          |
+| **qualimap**               | `snapshot({total, high, low})` | **md5** (3 coverage profiles) + `exactMatch` (`rnaseq_qc_results.txt`)           | Identical except the input names, including 5'-3' bias and the order of tied junction motifs           |
 | **tin**                    | `snapshot({summary, xls})`     | Per transcript (any row order): IDs and coordinates exact, TIN at 1e-12 relative | Identical values; upstream's own row order and last binary digit vary (see below)                      |
 
 ### Tolerance rationale
@@ -196,8 +195,7 @@ Comparisons fall into three categories:
    intercept/slope), `featurecounts` (summaries), `qualimap` (coverage profiles), `preseq` (Linux only),
    `junction_saturation` (seeded), `split_bam`.
 2. **Exact after excluding non-data lines** (`ExactCompare.exactMatch`, no trimming): `samtools stats`
-   (`#` comments), `featurecounts` per-gene table (`# Program:` line), `qualimap` results (input names;
-   tied junction motifs as sets), `junction_annotation` (Interact BED header, log annotation line),
+   (`#` comments), `featurecounts` per-gene table (`# Program:` line), `qualimap` results (input names), `junction_annotation` (Interact BED header, log annotation line),
    `featurecounts` biotype counts.
 3. **Values that upstream itself does not fix to the last digit** (compared at a relative tolerance far
    below any real difference, with everything else exact):
@@ -376,7 +374,7 @@ library uses too:
 
 - **`ExactCompare.qualimapMotifTiesAsSets(file, lines)`**
   Qualimap junction-motif rows with each run of tied percentages sorted by name (and masked when the
-  top-11 list cuts through it), for comparing against Qualimap's hash-table order.
+  top-11 list cuts through it), for regression against older RustQC releases with variable tie order.
 
 ### nf-test Plugins
 

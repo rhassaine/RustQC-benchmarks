@@ -88,16 +88,11 @@ nextflow_process {
                     "${name} differs from upstream Qualimap"
             }
 
-            // rnaseq_qc_results.txt: identical to Qualimap 2.3, 5'-3' bias included, except
-            //   - "bam file =" / "gff file =", which name the inputs (upstream ran on a
-            //     name-sorted BAM and an uncompressed GTF);
-            //   - the order of junction motifs with equal percentages, which Qualimap takes
-            //     from Java HashMap iteration: each tied run is compared as a set
-            //     (ExactCompare.qualimapMotifTiesAsSets; no ties on this dataset today).
-            def results = { lines -> ExactCompare.qualimapMotifTiesAsSets('rnaseq_qc_results.txt', lines) }
+            // Check the report in upstream order, including tied motifs at the
+            // top-11 cutoff. The staged BAM and GTF paths can differ.
             ExactCompare.exactMatch(
-                results(path(resultsFile).readLines()),
-                results(path("${upstreamDir}/rnaseq_qc_results.txt").readLines()),
+                path(resultsFile).readLines(),
+                path("${upstreamDir}/rnaseq_qc_results.txt").readLines(),
                 ['    bam file = ', '    gff file = ']
             )
         }

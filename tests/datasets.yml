@@ -59,7 +59,7 @@ release_regression:
       reason: "exons listed in Subread featureCounts order (RustQC #193)"
       datasets: [hs_chr6_pe_rev, hs_chrXsub_pe_unstr, hs_ribo_chr19_22_se_fwd, hs_chrX_pe_unstr, hs_ribo_chr20_se_fwd]
     - path: "qualimap/{rnaseq_qc_results.txt,qualimapReport.html}"
-      reason: "Qualimap 2.3 read selection, 5'-3' bias and number formatting; tied motifs sorted by name (RustQC fix/qualimap-parity)"
+      reason: "Qualimap 2.3 read selection, 5'-3' bias and number formatting; tied motifs follow Java HashMap order (RustQC fix/qualimap-motif-parity)"
     - path: "qualimap/raw_data_qualimapReport/coverage_profile_along_genes_*.txt"
       reason: "Qualimap 2.3 read selection (RustQC fix/qualimap-parity)"
       datasets: [hs_chr22_pe_fwd]
