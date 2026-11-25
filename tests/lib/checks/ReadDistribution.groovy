@@ -11,14 +11,10 @@ class ReadDistribution extends ToolCheck {
         ['rseqc/read_distribution/read_distribution.txt': 'rseqc/read_distribution/{sample}.read_distribution.txt']
     }
 
-    // Measured on hs_chr6_pe_rev: every line and value identical to RSeQC read_distribution.py
-    // (run on the GTF2BED-derived BED, as the pipeline does). textMatch trims each line, as the
-    // committed reference of that dataset had its trailing whitespace stripped.
+    // Byte-identical to RSeQC read_distribution.py (run on the GTF2BED-derived BED, as the
+    // pipeline does), trailing spaces of its table rows included.
     void crosscheck(Run run) {
-        CompareUtils.textMatch(
-            run.lines(run.output(outputs[0])),
-            run.referenceLines('rseqc/read_distribution/read_distribution.txt')
-        )
+        run.assertIdentical(outputs[0], 'rseqc/read_distribution/read_distribution.txt', 'read_distribution.txt')
     }
 
     Object regressionView(Run run) {

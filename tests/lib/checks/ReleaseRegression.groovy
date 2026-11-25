@@ -8,8 +8,8 @@
  *                    changing, and their data is in the .txt/.r/.xls files next to them) and
  *                    CITATIONS.md (lists the RustQC version)
  *   VOLATILE_LINES   lines dropped before comparing: version and command-line headers
- *   MOTIF_ROWS       Qualimap junction-motif rows, compared per group of tied
- *                    percentages (RustQC lists tied motifs in a random order)
+ *   MOTIF_FILES      Qualimap junction-motif rows, compared per group of tied
+ *                    percentages (RustQC v0.2.1 lists tied motifs in a random order)
  *
  * Measured on hs_chr6_pe_rev, v0.2.1 vs main (6b66655): only CITATIONS.md and the dupRadar
  * density plot differ in bytes; every other file is identical.
@@ -52,25 +52,15 @@ class ReleaseRegression {
     ].asImmutable()
 
     /**
-     * KNOWN ISSUE (RustQC): the Qualimap junction-motif list ("ACCT : 10.89%", in
-     * rnaseq_qc_results.txt and as table rows in qualimapReport.html) is non-deterministic.
-     * RustQC counts motifs in a std HashMap, whose iteration order is random per process, and
-     * then stable-sorts them by frequency only (src/rna/qualimap/output.rs and report.rs), so
-     * motifs with equal percentages come out in a different order on every run. Seen on
-     * sc_pe_rev, sc_se_rev, hs_chr22_pe_fwd and hs_ribo_chr19_22_se_fwd.
-     *
-     * normaliseMotifs() compares each group of tied rows as a set (names sorted within the
-     * group; percentages and group order still compared). The list stops at the top 11, so when
-     * it is full the last tied group may be cut at a random member: its names are masked.
-     * Remove this once a RustQC release with the tie-breaking fix is both the baseline and :dev.
+     * The Qualimap junction-motif list ("ACCT : 10.89%", in rnaseq_qc_results.txt and as table
+     * rows in qualimapReport.html) of the baseline v0.2.1 is non-deterministic: it counts motifs
+     * in a std HashMap and stable-sorts them by frequency only, so motifs with equal percentages
+     * come out in a different order on every run (seen on sc_pe_rev, sc_se_rev, hs_chr22_pe_fwd
+     * and hs_ribo_chr19_22_se_fwd). Tied runs are therefore compared as sets
+     * (CompareUtils.qualimapMotifTiesAsSets). Remove this once the baseline release sorts ties
+     * by name (RustQC fix/qualimap-parity).
      */
-    static final Map<String, java.util.regex.Pattern> MOTIF_ROWS = [
-        'qualimap/rnaseq_qc_results.txt': ~/^(\s+)([ACGTN]{4})( : )([\d.]+)(%)$/,
-        'qualimap/qualimapReport.html'  : ~/^(<td class="column1">)([ACGTN]{4})(<\/td><td class="column2">)([\d.]+)(%<\/td>)$/,
-    ].asImmutable()
-
-    /** Qualimap lists at most this many junction motifs. */
-    static final int MOTIF_LIMIT = 11
+    static final List<String> MOTIF_FILES = ['qualimap/rnaseq_qc_results.txt', 'qualimap/qualimapReport.html'].asImmutable()
 
     // ── Test entry points ─────────────────────────────────────────────
 
@@ -217,38 +207,10 @@ class ReleaseRegression {
         return header + shown.join('\n')
     }
 
-    /**
-     * The junction-motif rows of a Qualimap output with each run of equal percentages sorted by
-     * motif name, and the names of the last run masked when the list is full (see MOTIF_ROWS).
-     * Other files and lines are returned unchanged.
-     */
+    /** Qualimap junction-motif rows with tied runs compared as sets (see MOTIF_FILES). */
     static List<String> normaliseMotifs(String rel, List<String> lines) {
-        java.util.regex.Pattern pattern = MOTIF_ROWS[rel]
-        if (pattern == null) return lines
-        List<String> out = new ArrayList<String>(lines)
-        List<Integer> rows = []
-        List<java.util.regex.Matcher> found = []
-        for (int i = 0; i < lines.size(); i++) {
-            def m = pattern.matcher(lines[i])
-            if (m.matches()) {
-                rows << i
-                found << m
-            }
-        }
-        int start = 0
-        while (start < rows.size()) {
-            int end = start
-            while (end + 1 < rows.size() && found[end + 1].group(4) == found[start].group(4)) end++
-            boolean cutOff = rows.size() == MOTIF_LIMIT && end == rows.size() - 1
-            List<String> names = (start..end).collect { found[it].group(2) }.sort()
-            for (int k = start; k <= end; k++) {
-                def m = found[k]
-                String name = cutOff ? '<tied motif>' : names[k - start]
-                out[rows[k]] = m.group(1) + name + m.group(3) + m.group(4) + m.group(5)
-            }
-            start = end + 1
-        }
-        return out
+        if (!(rel in MOTIF_FILES)) return lines
+        return CompareUtils.qualimapMotifTiesAsSets(rel.tokenize('/').last(), lines)
     }
 
     /** release_regression.accepted_differences from tests/datasets.yml: glob -> reason. */

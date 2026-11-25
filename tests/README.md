@@ -164,7 +164,7 @@ Row 42, Col 3: value 0.12345679 differs from expected 0.12345678
 ## Comparison Methods & Tolerances
 
 Each crosscheck compares RustQC with the upstream tool exactly. The only allowances left are for values that
-the upstream tool itself does not reproduce to the last digit (TIN; see
+the upstream tool itself does not reproduce to the last digit (TIN, degenerate dupRadar fits; see
 [Tolerance rationale](#tolerance-rationale)), and for orders that upstream takes from a hash table (Qualimap's tied
 junction motifs, GTF2BED's tied transcripts).
 
@@ -207,6 +207,11 @@ Comparisons fall into three categories:
      differ between CPUs (glibc picks FMA code at run time): measured, 1 of 8,443 values differs by 2 ulp
      between the committed reference and tin.py on another CPU. Rows are matched by transcript, values at
      1e-12 relative.
+   - `dupradar` on datasets without duplicates (degenerate logistic fit, upstream intercept below 1e-9):
+     R's `glm()` stops after 25 iterations at values that are accumulated rounding noise, so they move
+     with the BLAS summation order; RustQC reproduces `glm.fit` but not OpenBLAS's kernels. Labels and
+     layout exact, values at 1e-10 (intercept) and 1e-12 (slope) relative; measured at most 1.4e-12 and
+     3.5e-14.
 
 **Upstream dupRadar and OpenBLAS.** The dupRadar container ships OpenBLAS built with run-time CPU
 dispatch, so R's fitted intercept/slope changed in the last digits with the runner's CPU.
@@ -361,6 +366,9 @@ Automatically loaded by nf-test via the `libDir` config. Provides:
   Extract a range of lines from a file.
 
 ### ExactCompare (`tests/lib/ExactCompare.groovy`)
+
+An unqualified alias of the exact-comparison helpers of `checks.CompareUtils`, which the shared checks
+library uses too:
 
 - **`ExactCompare.exactMatch(actualLines, expectedLines, skipPrefixes=[])`**
   Line-by-line comparison with nothing trimmed and blank lines kept; only lines starting with one of

@@ -53,19 +53,16 @@ under a test. Each input also records its md5.
 Only `hs_chr6_pe_rev` is duplicate-marked, so the other datasets run with `--skip-dup-check`.
 Strandedness was checked with RSeQC `infer_experiment.py` (the references hold its output).
 
-Known differences between RustQC and the upstream tools on these datasets (each documented
-where it is handled):
+RustQC is compared with the upstream tools exactly on every dataset. What is not exact, and why:
 
-- **samtools stats, GC-depth section** (`GCD` lines): percentiles differ on
-  `hs_chrX_pe_unstr`, `hs_ribo_chr19_22_se_fwd` and `hs_ribo_chr20_se_fwd`; the section is
-  skipped in `SamtoolsStats` for every dataset.
-- **samtools stats, other lines**: on `hs_chrXsub_pe_unstr`, `COV [1-1]` is one higher than
-  samtools; on `sc_pe_rev`, `SN error rate` differs in the last printed digit. Both datasets mark
-  `samtools_stats: regression`.
 - **dupRadar intercept/slope without duplicates**: with no read marked duplicate the logistic fit
-  is degenerate; R stops at an intercept of ~2.9e-12, RustQC at ~1e-10. `DupRadar` accepts any
-  value below 1e-9 in that case. The dupMatrix itself is byte-identical on every
-  dataset with an upstream reference.
+  is degenerate and R's `glm()` stops after 25 iterations at values (intercept ~3e-12, slope ~1)
+  that are accumulated rounding noise; they move with the BLAS summation order, which RustQC does
+  not reproduce. `DupRadar` then compares the labels and layout exactly and the values at 1e-10
+  (intercept) and 1e-12 (slope) relative; on `hs_chr6_pe_rev` (duplicates marked) the file is
+  compared byte for byte. Upstream dupRadar runs with OpenBLAS pinned to its generic kernels
+  (`conf/modules.config`), otherwise its own last digits depend on the CPU. The dupMatrix is
+  byte-identical on every dataset with an upstream reference.
 - **dupRadar on `hs_chr22_pe_fwd`**: upstream dupRadar exits with an error (6 genes), so the
   dataset marks `dupradar: upstream_error`.
 
@@ -173,8 +170,9 @@ from `tests/datasets.yml` (override with `RUSTQC_BASELINE_IMAGE`). It then compa
 - every file exactly, except plots (`*.png`, `*.svg`, `*.pdf`) and `CITATIONS.md`, and after
   dropping version/command-line header lines (featureCounts `# Program:`, the samtools stats
   header) and the Qualimap report's run timestamps. Qualimap junction motifs with equal
-  percentages are compared as a set, because RustQC lists them in a random order (a known RustQC
-  bug). The exclusions are listed in `tests/lib/checks/ReleaseRegression.groovy`;
+  percentages are compared as a set, because the baseline release v0.2.1 lists them in a random
+  order (fixed since; drop this once the baseline sorts them). The exclusions are listed in
+  `tests/lib/checks/ReleaseRegression.groovy`;
 - a file the baseline writes but the current run does not fails; a new file is only reported;
 - intentional changes since the release go in `release_regression.accepted_differences`
   (`{path: <glob under rustqc/>, reason: ..., datasets: [optional ids]}`): reported, not failed.

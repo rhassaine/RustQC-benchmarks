@@ -20,7 +20,7 @@ All upstream tools are run via standard [nf-core modules](https://nf-co.re/modul
 
 | RustQC output       | Upstream tool                                                            | Comparison                                                       |
 | ------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| dupRadar            | [dupRadar](https://bioconductor.org/packages/dupRadar/) (R/Bioconductor) | md5 (matrix, intercept/slope)                                    |
+| dupRadar            | [dupRadar](https://bioconductor.org/packages/dupRadar/) (R/Bioconductor) | md5 (matrix, intercept/slope); degenerate fits at 1e-10 / 1e-12  |
 | featureCounts       | [Subread featureCounts](http://subread.sourceforge.net/)                 | Exact (per-gene table incl. exon lists, summaries, biotypes)     |
 | samtools            | [samtools](http://www.htslib.org/) stats / flagstat / idxstats           | md5 (flagstat, idxstats); stats exact except `#` comment lines   |
 | bam_stat            | [RSeQC bam_stat.py](http://rseqc.sourceforge.net/)                       | md5                                                              |

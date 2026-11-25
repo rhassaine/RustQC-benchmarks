@@ -134,10 +134,7 @@ datasets:
       skip_dup_check: true
     references:
       dir: snapshots/rna/hs_chrXsub_pe_unstr
-    expect:
-      # KNOWN DISCREPANCY: RustQC's samtools stats coverage histogram counts one more base at
-      # depth 1 than samtools ('COV [1-1] 1 20944' vs 20943); every other line matches.
-      samtools_stats: regression
+    expect: {}
     tags: [pe, unstranded, ensembl, grch37, no_gene_records]
 
   - id: sc_pe_rev
@@ -162,10 +159,7 @@ datasets:
       skip_dup_check: true
     references:
       dir: snapshots/rna/sc_pe_rev
-    expect:
-      # KNOWN DISCREPANCY: RustQC's samtools stats 'SN error rate' differs in the last printed
-      # digit (8.805892e-03 vs samtools' 8.805891e-03); every other line matches.
-      samtools_stats: regression
+    expect: {}
     tags: [pe, reverse, ensembl, yeast, transgene, no_gene_records]
 
   - id: sc_se_rev

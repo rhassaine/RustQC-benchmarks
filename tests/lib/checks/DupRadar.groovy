@@ -15,36 +15,46 @@ class DupRadar extends ToolCheck {
     }
 
     void crosscheck(Run run) {
-        // Measured on hs_chr6_pe_rev: dupMatrix byte-identical to dupRadar (all 14 columns,
-        // counts and the derived dupRate/RPK/RPKM columns in R's number formatting).
+        // dupMatrix: byte-identical to dupRadar (all 14 columns, counts and the derived
+        // dupRate/RPK/RPKM columns in R's number formatting).
         run.assertIdentical(outputs[0], 'dupradar/dupMatrix.txt', 'dupMatrix.txt')
 
-        // intercept/slope: same labels; RustQC's logistic fit and R's glm() agree to ~2.6e-9
-        // relative (measured), so allow 1e-7 relative.
+        // intercept/slope: byte-identical to dupRadar's intercept_slope.txt (R's cat(): 15
+        // significant digits, a space after the intercept). The upstream references are made
+        // with OpenBLAS pinned to its generic kernels (conf/modules.config), without which
+        // their last digits depend on the CPU.
         //
-        // KNOWN DISCREPANCY (degenerate fit): with no read marked duplicate (every dataset
-        // except hs_chr6_pe_rev), the duplication rate is 0 for every gene and the logistic
-        // fit has no finite solution. R's glm() stops at its iteration limit with an intercept
-        // of ~2.9e-12, RustQC's fit stops at ~1e-10. Both mean "no duplication", so an
-        // upstream value below 1e-9 only requires RustQC's to be below 1e-9 too.
+        // Degenerate fit: with no read marked duplicate (every dataset except hs_chr6_pe_rev)
+        // the duplication rate is 0 for every gene and the logistic fit has no finite
+        // solution. R's glm() stops after 25 iterations at an intercept of ~3e-12 and a slope
+        // of ~1, and those values are rounding noise accumulated over the iterations: R's
+        // own result moves in the 12th-15th digit with the BLAS kernels. RustQC reproduces
+        // glm.fit but not the BLAS summation order, so in that case only (upstream intercept
+        // below 1e-9) the labels and layout must be identical and the values agree to 1e-10
+        // relative (intercept) and 1e-12 relative (slope). Measured: at most 1.4e-12 and
+        // 3.5e-14 (hs_ribo_chr19_22_se_fwd).
+        def expectedLines = run.referenceLines('dupradar/intercept_slope.txt')
         def parse = { List<String> lines ->
             lines.findAll { it.trim() }.collectEntries { line ->
                 def i = line.lastIndexOf(':')
                 [(line.substring(0, i)): line.substring(i + 1).trim() as Double]
             }
         }
-        def actual   = parse(run.lines(run.output(outputs[1])))
-        def expected = parse(run.referenceLines('dupradar/intercept_slope.txt'))
-        assert actual.keySet() == expected.keySet() : \
-            "intercept_slope labels differ: RustQC=${actual.keySet()} upstream=${expected.keySet()}"
+        def expected = parse(expectedLines)
+        boolean degenerate = expected.values().any { Math.abs(it) < 1e-9 }
+        if (!degenerate) {
+            run.assertIdentical(outputs[1], 'dupradar/intercept_slope.txt', 'intercept_slope.txt')
+            return
+        }
+        def actualLines = run.lines(run.output(outputs[1]))
+        def layout = { List<String> lines -> lines.collect { it.replaceAll(/: \S+/, ': <value>') } }
+        CompareUtils.exactMatch(layout(actualLines), layout(expectedLines))
+        def actual = parse(actualLines)
         expected.each { label, value ->
-            if (Math.abs(value) < 1e-9) {
-                assert Math.abs(actual[label]) < 1e-9 : \
-                    "${label}: RustQC=${actual[label]} upstream=${value} (upstream fit is degenerate, RustQC's is not)"
-                return
-            }
-            def relDiff = Math.abs(actual[label] - value) / Math.abs(value)
-            assert relDiff < 1e-7 : "${label}: RustQC=${actual[label]} upstream=${value} (relative diff ${relDiff})"
+            double tol = Math.abs(value) < 1e-9 ? 1e-10 : 1e-12
+            double relDiff = Math.abs(actual[label] - value) / Math.abs(value)
+            assert relDiff <= tol : \
+                "${label}: RustQC=${actual[label]} upstream=${value} (relative diff ${relDiff}, degenerate fit, allowed ${tol})"
         }
     }
 
