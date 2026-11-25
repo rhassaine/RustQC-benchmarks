@@ -54,12 +54,12 @@ release_regression:
     - path: "dupradar/{sample}_intercept_slope.txt"
       reason: "dupRadar fit reproduces R's glm.fit and ends the intercept line with a space, as R's cat() does (RustQC fix/dupradar-fit)"
     - path: "dupradar/{sample}_{dup_intercept_mqc,duprateExpDensCurve_mqc}.txt"
-      reason: "MultiQC files derived from the dupRadar fit (RustQC fix/dupradar-fit)"
+      reason: "MultiQC files match the nf-core dupRadar template and pinned netlib fit (RustQC fix/dupradar-netlib)"
     - path: "featurecounts/{sample}.featureCounts.tsv"
       reason: "exons listed in Subread featureCounts order (RustQC #193)"
       datasets: [hs_chr6_pe_rev, hs_chrXsub_pe_unstr, hs_ribo_chr19_22_se_fwd, hs_chrX_pe_unstr, hs_ribo_chr20_se_fwd]
     - path: "qualimap/{rnaseq_qc_results.txt,qualimapReport.html}"
-      reason: "Qualimap 2.3 read selection, 5'-3' bias and number formatting; tied motifs sorted by name (RustQC fix/qualimap-parity)"
+      reason: "Qualimap 2.3 read selection, 5'-3' bias and number formatting; tied motifs follow Java HashMap order (RustQC fix/qualimap-motif-parity)"
     - path: "qualimap/raw_data_qualimapReport/coverage_profile_along_genes_*.txt"
       reason: "Qualimap 2.3 read selection (RustQC fix/qualimap-parity)"
       datasets: [hs_chr22_pe_fwd]
