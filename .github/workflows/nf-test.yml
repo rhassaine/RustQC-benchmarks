@@ -68,8 +68,7 @@ env:
 jobs:
   nf-test-changes:
     name: nf-test-changes
-    runs-on: # use GitHub runners
-      - "ubuntu-latest"
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-nf-test-changes", "runner=1cpu-linux-x64"]', github.run_id)) || 'ubuntu-latest' }}
     outputs:
       shard: ${{ steps.set-shards.outputs.shard }}
       total_shards: ${{ steps.set-shards.outputs.total_shards || '0' }}
@@ -77,32 +76,22 @@ jobs:
       run_large: ${{ steps.plan.outputs.run_large }}
       run_refgen: ${{ steps.plan.outputs.run_refgen }}
       testdata_sets: ${{ steps.testdata.outputs.sets }}
-      runs_on: ${{ steps.plan.outputs.runs_on }}
-      runner_small: ${{ steps.plan.outputs.runner_small }}
-      runner_large: ${{ steps.plan.outputs.runner_large }}
-      runner_download: ${{ steps.plan.outputs.runner_download }}
     steps:
       # Which dataset sets run (tests/DATASETS.md), and on which runners:
       #   small  every event except pushes to main and the `large` dispatch mode
       #   large  pushes to main, releases, the weekly schedule and the `large` dispatch mode;
       #          never on pull requests
       #   refgen only the `refgen` dispatch mode: upstream references as an artifact
-      # RunsOn is opt-in: with the repository variable RUNS_ON_ENABLED=true the test jobs run
-      # on RunsOn runners with Magic Cache (extras=s3-cache, so actions/cache is backed by S3).
-      # Pull requests from forks always use GitHub-hosted runners. Runner names come from the
-      # RUNS_ON_RUNNER_{SMALL,LARGE,DOWNLOAD} variables, defaulting to RunsOn's built-in types.
-      - name: Plan test sets and runners
+      # Runners: on seqeralabs/RustQC-benchmarks every job runs on RunsOn (as nf-core/oncoanalyser
+      # does), pull requests from forks included (they run in the base repository; maintainer
+      # approval of fork workflows is the gate). Jobs that use actions/cache add extras=s3-cache
+      # (Magic Cache: actions/cache backed by S3) and the runs-on/action step. Anywhere else
+      # (forks' own CI) the jobs fall back to GitHub-hosted ubuntu-latest.
+      - name: Plan test sets
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
           TEST_MODE: ${{ github.event.inputs.test_mode }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          RUNS_ON_ENABLED: ${{ vars.RUNS_ON_ENABLED }}
-          RUNNER_SMALL: ${{ vars.RUNS_ON_RUNNER_SMALL || '4cpu-linux-x64' }}
-          RUNNER_LARGE: ${{ vars.RUNS_ON_RUNNER_LARGE || '8cpu-linux-x64' }}
-          RUNNER_DOWNLOAD: ${{ vars.RUNS_ON_RUNNER_DOWNLOAD || '2cpu-linux-x64' }}
         run: |
           run_small=true
           run_large=false
@@ -116,25 +105,10 @@ jobs:
                 refgen) run_small=false; run_refgen=true ;;
               esac ;;
           esac
-          if [[ "$RUNS_ON_ENABLED" == "true" ]] && [[ "$EVENT_NAME" != "pull_request" || "$HEAD_REPO" == "$REPO" ]]; then
-            runs_on=true
-            runner_small="runs-on=${RUN_ID}-nf-test/runner=${RUNNER_SMALL}/volume=80gb/extras=s3-cache"
-            runner_large="runs-on=${RUN_ID}-nf-test-large/runner=${RUNNER_LARGE}/volume=200gb/extras=s3-cache"
-            runner_download="runs-on=${RUN_ID}-download-testdata/runner=${RUNNER_DOWNLOAD}/volume=80gb/extras=s3-cache"
-          else
-            runs_on=false
-            runner_small=ubuntu-latest
-            runner_large=ubuntu-latest
-            runner_download=ubuntu-latest
-          fi
           {
             echo "run_small=$run_small"
             echo "run_large=$run_large"
             echo "run_refgen=$run_refgen"
-            echo "runs_on=$runs_on"
-            echo "runner_small=$runner_small"
-            echo "runner_large=$runner_large"
-            echo "runner_download=$runner_download"
           } | tee -a "$GITHUB_OUTPUT"
 
       - name: Clean Workspace # Purge the workspace in case it's running on a self-hosted runner
@@ -181,7 +155,7 @@ jobs:
     name: "download test data (${{ matrix.set }})"
     needs: [nf-test-changes]
     if: ${{ needs.nf-test-changes.outputs.testdata_sets != '[]' && needs.nf-test-changes.outputs.testdata_sets != '' }}
-    runs-on: ${{ needs.nf-test-changes.outputs.runner_download }}
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-download-testdata-{1}", "runner=4cpu-linux-x64", "volume=80gb", "extras=s3-cache"]', github.run_id, matrix.set)) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -192,7 +166,7 @@ jobs:
           persist-credentials: false
 
       - name: Enable RunsOn Magic Cache
-        if: ${{ needs.nf-test-changes.outputs.runs_on == 'true' }}
+        if: ${{ github.repository_owner == 'seqeralabs' }}
         uses: runs-on/action@4a3bfc79f21a9b97e972e2ba75a2b0b1e9688670 # v2.7.1
 
       # Cached files are only used if they have the md5 recorded in tests/datasets.yml
@@ -226,7 +200,7 @@ jobs:
     needs: [nf-test-changes, download-testdata]
     # Also when download-testdata failed or was skipped: inputs then come from their URLs
     if: ${{ !cancelled() && needs.nf-test-changes.result == 'success' && needs.nf-test-changes.outputs.run_small == 'true' && needs.nf-test-changes.outputs.total_shards != '0' }}
-    runs-on: ${{ needs.nf-test-changes.outputs.runner_small }}
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-nf-test", "runner=4cpu-linux-x64", "volume=80gb", "extras=s3-cache"]', github.run_id)) || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -253,7 +227,7 @@ jobs:
           fetch-depth: 0
 
       - name: Enable RunsOn Magic Cache
-        if: ${{ needs.nf-test-changes.outputs.runs_on == 'true' }}
+        if: ${{ github.repository_owner == 'seqeralabs' }}
         uses: runs-on/action@4a3bfc79f21a9b97e972e2ba75a2b0b1e9688670 # v2.7.1
 
       - name: Restore test data cache
@@ -325,7 +299,7 @@ jobs:
     name: "large | docker | 25.10.4"
     needs: [nf-test-changes, download-testdata]
     if: ${{ !cancelled() && needs.nf-test-changes.result == 'success' && needs.nf-test-changes.outputs.run_large == 'true' }}
-    runs-on: ${{ needs.nf-test-changes.outputs.runner_large }}
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-nf-test-large", "runner=8cpu-linux-x64", "volume=200gb", "extras=s3-cache"]', github.run_id)) || 'ubuntu-latest' }}
     env:
       NXF_ANSI_LOG: false
       RUSTQC_DATASET_SETS: large
@@ -336,7 +310,7 @@ jobs:
           persist-credentials: false
 
       - name: Enable RunsOn Magic Cache
-        if: ${{ needs.nf-test-changes.outputs.runs_on == 'true' }}
+        if: ${{ github.repository_owner == 'seqeralabs' }}
         uses: runs-on/action@4a3bfc79f21a9b97e972e2ba75a2b0b1e9688670 # v2.7.1
 
       - name: Restore test data cache
@@ -372,7 +346,7 @@ jobs:
     name: "refgen | docker | 25.10.4"
     needs: [nf-test-changes]
     if: ${{ needs.nf-test-changes.outputs.run_refgen == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-refgen", "runner=4cpu-linux-x64", "volume=80gb"]', github.run_id)) || 'ubuntu-latest' }}
     env:
       NXF_ANSI_LOG: false
       RUSTQC_REFGEN: "1"
@@ -410,8 +384,7 @@ jobs:
   confirm-pass:
     needs: [nf-test, nf-test-large, refgen]
     if: always()
-    runs-on: # use GitHub runners
-      - "ubuntu-latest"
+    runs-on: ${{ github.repository_owner == 'seqeralabs' && fromJSON(format('["runs-on={0}-confirm-pass", "runner=1cpu-linux-x64"]', github.run_id)) || 'ubuntu-latest' }}
     steps:
       - name: One or more tests failed (excluding latest-everything)
         if: ${{ contains(needs.*.result, 'failure') }}

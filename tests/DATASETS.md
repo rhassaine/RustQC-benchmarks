@@ -258,23 +258,29 @@ it downloads nothing. The test jobs restore the same key and set `RUSTQC_TESTDAT
 `Datasets` uses for every input whose copy is there with the manifest md5. Anything else falls
 back to the nf-core URL, so a failed download job or a cache miss only makes the tests slower.
 
-### RunsOn (optional)
+### RunsOn
 
-By default every job runs on GitHub-hosted `ubuntu-latest` runners, where `actions/cache` is
-limited to 10 GB per repository. To run the test jobs on [RunsOn](https://runs-on.com) instead,
-with Magic Cache (`actions/cache` backed by S3, no 10 GB limit), set repository variables
-(Settings > Secrets and variables > Actions > Variables):
+On `seqeralabs/RustQC-benchmarks`, every job of `.github/workflows/nf-test.yml` runs on
+[RunsOn](https://runs-on.com) runners, as nf-core/oncoanalyser does:
 
-| Variable                  | Value                                          | Default                |
-| ------------------------- | ---------------------------------------------- | ---------------------- |
-| `RUNS_ON_ENABLED`         | `true` to use RunsOn                           | unset (GitHub runners) |
-| `RUNS_ON_RUNNER_SMALL`    | RunsOn runner type for the small-set test jobs | `4cpu-linux-x64`       |
-| `RUNS_ON_RUNNER_LARGE`    | runner type for the large-set job              | `8cpu-linux-x64`       |
-| `RUNS_ON_RUNNER_DOWNLOAD` | runner type for the download jobs              | `2cpu-linux-x64`       |
+| Job                        | Runner           | Volume | Magic Cache |
+| -------------------------- | ---------------- | ------ | ----------- |
+| `nf-test-changes`          | `1cpu-linux-x64` |        |             |
+| `download test data (...)` | `4cpu-linux-x64` | 80 GB  | yes         |
+| small set (`nf-test`)      | `4cpu-linux-x64` | 80 GB  | yes         |
+| large set                  | `8cpu-linux-x64` | 200 GB | yes         |
+| `refgen`                   | `4cpu-linux-x64` | 80 GB  |             |
+| `confirm-pass`             | `1cpu-linux-x64` |        |             |
 
-The RunsOn GitHub App must be installed for the repository, and the runner types must exist in
-the RunsOn configuration (the defaults are RunsOn's built-in types; custom ones work too). Jobs
-then get the labels `runs-on=<run id>-<job>/runner=<type>/volume=<size>/extras=s3-cache`, and a
-`runs-on/action` step enables Magic Cache. Pull requests from forks always run on GitHub-hosted
-runners, so self-hosted runners never run untrusted code. `nf-test-changes`, `confirm-pass` and
-`refgen` always use GitHub-hosted runners.
+Jobs get the labels `runs-on=<run id>-<job>`, `runner=<type>`, `volume=<size>` and, where they
+use `actions/cache`, `extras=s3-cache` plus a `runs-on/action` step: Magic Cache backs
+`actions/cache` with S3, without GitHub's 10 GB per-repository limit. Pull requests from forks
+run in the base repository, so they use RunsOn too.
+
+- **The RunsOn GitHub App must be installed for seqeralabs/RustQC-benchmarks before this is
+  merged**, otherwise the jobs queue forever waiting for a runner.
+- Fork pull requests then run on Seqera's runners: consider setting "Require approval for all
+  outside collaborators" (Settings > Actions > General > Fork pull request workflows).
+
+Anywhere else (a fork's own CI) the same jobs run on GitHub-hosted `ubuntu-latest`: the runner is
+chosen with `github.repository_owner == 'seqeralabs'`, and the `runs-on/action` steps are skipped.
