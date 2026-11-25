@@ -53,6 +53,8 @@ permissions:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   NFT_VER: "0.9.5"
+  # Use the immutable combined build for this fork-only matrix.
+  RUSTQC_IMAGE: ghcr.io/rhassaine/rustqc@sha256:c3820726d0528fc2f2811fb2a8feacc51e4ff1792fe57a0fe809a16dee936b47
   NFT_WORKDIR: "~"
   NXF_ANSI_LOG: false
   NXF_SINGULARITY_CACHEDIR: ${{ github.workspace }}/.singularity
