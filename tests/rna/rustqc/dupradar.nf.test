@@ -85,25 +85,14 @@ nextflow_process {
             assert path(matrixFile).md5 == path("${upstreamDir}/dupMatrix.txt").md5 : \
                 "dupMatrix.txt differs from upstream dupRadar"
 
-            // intercept/slope: same labels. The values come from RustQC's own logistic
-            // fit versus R's glm(), which agree to ~2.6e-9 relative (measured), so the
-            // last few digits differ. Allow 1e-7 relative.
-            def parseSlopeFile = { lines ->
-                lines.findAll { it.trim() }.collectEntries { line ->
-                    def i = line.lastIndexOf(':')
-                    [(line.substring(0, i)): line.substring(i + 1).trim() as Double]
-                }
-            }
-            def actualVals   = parseSlopeFile(path(slopeFile).readLines())
-            def expectedVals = parseSlopeFile(path("${upstreamDir}/intercept_slope.txt").readLines())
-            assert actualVals.keySet() == expectedVals.keySet() : \
-                "intercept_slope labels differ: RustQC=${actualVals.keySet()} upstream=${expectedVals.keySet()}"
-            assert expectedVals.size() == 2 : "Expected intercept and slope lines in upstream output"
-            expectedVals.each { label, expected ->
-                def relDiff = Math.abs(actualVals[label] - expected) / Math.abs(expected)
-                assert relDiff < 1e-7 : \
-                    "${label}: RustQC=${actualVals[label]} upstream=${expected} (relative diff ${relDiff})"
-            }
+            // intercept/slope: byte-identical to dupRadar (R's cat(): 15 significant
+            // digits, a space after the intercept). The upstream reference is made with
+            // OpenBLAS pinned to its generic kernels (conf/modules.config), without which its
+            // last digits depend on the CPU.
+            assert path(slopeFile).md5 == path("${upstreamDir}/intercept_slope.txt").md5 : \
+                "intercept_slope.txt differs from upstream dupRadar:\n" +
+                "  RustQC:   ${path(slopeFile).readLines()}\n" +
+                "  upstream: ${path("${upstreamDir}/intercept_slope.txt").readLines()}"
         }
     }
 }

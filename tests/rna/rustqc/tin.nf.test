@@ -98,32 +98,34 @@ nextflow_process {
 
             def upstreamDir = "${projectDir}/snapshots/rna/small/rseqc/tin"
 
-            // KNOWN DISCREPANCY: RustQC TIN is systematically ~2% lower than RSeQC
-            // tin.py. The cause has not been identified yet; it is pending
-            // investigation in RustQC. Measured on this dataset:
-            //   - summary: mean -1.9%, median -2.1%, stdev -0.9%
-            //   - per transcript: 2,073 of 8,443 values differ (1,635 of them lower),
-            //     max |diff| 8.79 TIN points; 17 transcripts with upstream TIN < 1
-            //     are reported as 0 by RustQC
-            // The allowances below sit just above these gaps, so any further drift
-            // fails. Transcript set, coordinates and header must match exactly.
+            // TIN values match RSeQC tin.py (5.0.4) exactly, up to the last binary digit,
+            // which upstream itself does not fix:
+            //   - tin.py writes transcripts in BED order, and the GTF2BED Perl script emits
+            //     transcripts with equal coordinates in Perl hash order, which changes from run
+            //     to run. So rows are compared by transcript, and the summary mean/stdev (a sum
+            //     over the rows in that order) may differ in the last digit.
+            //   - math.log/math.exp come from the platform libm (glibc picks FMA or non-FMA
+            //     code for the CPU), so a TIN value may differ by a few ulp between machines:
+            //     measured on this dataset, 1 of 8,443 values differs by 2 ulp between the
+            //     committed reference and tin.py on another CPU.
+            // Both sides are therefore compared at 1e-12 relative (about 4,500 ulp), far below
+            // any real difference; transcript IDs and coordinates must be identical.
+            def tol = 1e-12
 
-            // Summary: TIN mean/median/stdev within 2.5% relative. Column 0 is the
-            // BAM file name, not a metric.
+            // Summary: column 0 is the BAM file name, columns 1-3 TIN mean/median/stdev.
             CompareUtils.tsvMatch(
                 path(summaryFile).readLines(),
                 path("${upstreamDir}/test.summary.txt").readLines(),
-                [relTolerance: 0.025, skipColumns: [0] as Set]
+                [relTolerance: tol, skipColumns: [0] as Set, trimLines: false]
             )
 
-            // Per transcript: rows are written in a different order, so key by geneID.
-            // Columns 0-3 (geneID, chrom, tx_start, tx_end) must be identical; the TIN
-            // value (column 4) may differ by at most 9.0 points.
+            // Per transcript, keyed by geneID: columns 0-3 (geneID, chrom, tx_start, tx_end)
+            // identical, TIN (column 4) at the tolerance above.
             def actualLines   = path(xlsFile).readLines()
             def expectedLines = path("${upstreamDir}/test.tin.xls").readLines()
             assert actualLines[0] == expectedLines[0] : \
                 "TIN xls header differs: '${actualLines[0]}' vs '${expectedLines[0]}'"
-            def byId = { lines -> lines.drop(1).collectEntries { line -> def c = line.split('\t'); [(c[0]): c] } }
+            def byId = { lines -> lines.drop(1).collectEntries { line -> def c = line.split('\t', -1); [(c[0]): c] } }
             def actualRows   = byId(actualLines)
             def expectedRows = byId(expectedLines)
             assert actualRows.size() == actualLines.size() - 1 : "Duplicate geneIDs in RustQC TIN xls"
@@ -131,17 +133,16 @@ nextflow_process {
                 "TIN transcripts differ: ${(actualRows.keySet() - expectedRows.keySet()).size()} only in RustQC, " +
                 "${(expectedRows.keySet() - actualRows.keySet()).size()} only upstream"
 
-            def coordDiffs = expectedRows.keySet().findAll { id -> actualRows[id][0..3] != expectedRows[id][0..3] }
-            assert !coordDiffs : \
-                "TIN transcript coordinates differ for ${coordDiffs.size()} transcripts, e.g. " +
-                coordDiffs.take(5).collect { "${actualRows[it].join(' ')} vs ${expectedRows[it].join(' ')}" }
-
-            def tinDiffs = expectedRows.keySet().findAll { id ->
-                Math.abs((actualRows[id][4] as Double) - (expectedRows[id][4] as Double)) > 9.0
+            def rowDiffs = expectedRows.keySet().findAll { id ->
+                def a = actualRows[id], e = expectedRows[id]
+                if (a.size() != e.size() || a[0..3] != e[0..3]) return true
+                if (a[4] == e[4]) return false
+                double x = a[4] as Double, y = e[4] as Double
+                return Math.abs(x - y) > tol * Math.abs(y)
             }
-            assert !tinDiffs : \
-                "TIN differs by more than 9.0 for ${tinDiffs.size()} transcripts, e.g. " +
-                tinDiffs.take(5).collect { "${it}: RustQC=${actualRows[it][4]} upstream=${expectedRows[it][4]}" }
+            assert !rowDiffs : \
+                "TIN differs for ${rowDiffs.size()} transcripts, e.g. " +
+                rowDiffs.take(5).collect { "RustQC '${actualRows[it].join(' ')}' vs upstream '${expectedRows[it].join(' ')}'" }
         }
     }
 }
