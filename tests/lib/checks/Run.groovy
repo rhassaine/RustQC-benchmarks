@@ -69,6 +69,12 @@ class Run {
         return f.readLines()
     }
 
+    /** MD5 of the original file bytes. */
+    static String md5(File file) {
+        def digest = MessageDigest.getInstance('MD5')
+        return digest.digest(file.bytes).encodeHex().toString()
+    }
+
     static String md5(List<String> lines) {
         def digest = MessageDigest.getInstance('MD5')
         lines.each { digest.update((it + '\n').getBytes('UTF-8')) }

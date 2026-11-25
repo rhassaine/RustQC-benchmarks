@@ -1,2 +1,2 @@
-sc_se_rev - dupRadar Int (duprate at low read counts): 2.90070146547678e-12 
-sc_se_rev - dupRadar Sl (progression of the duplication rate): 1
+sc_se_rev - dupRadar Int (duprate at low read counts): 2.9007014654769e-12 
+sc_se_rev - dupRadar Sl (progression of the duplication rate): 0.999999999999997

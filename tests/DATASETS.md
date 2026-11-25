@@ -55,16 +55,11 @@ Strandedness was checked with RSeQC `infer_experiment.py` (the references hold i
 
 RustQC is compared with the upstream tools exactly on every dataset. What is not exact, and why:
 
-- **dupRadar intercept/slope without duplicates**: with no read marked duplicate the logistic fit
-  is degenerate and R's `glm()` stops after 25 iterations at values (intercept ~3e-12, slope ~1)
-  that are accumulated rounding noise; they move with the BLAS summation order, which RustQC does
-  not reproduce. `DupRadar` then compares the labels and layout exactly and the values at 1e-10
-  (intercept) and 1e-12 (slope) relative; on `hs_chr6_pe_rev` (duplicates marked) the file is
-  compared byte for byte. Upstream dupRadar runs with OpenBLAS pinned to its generic kernels
-  (`conf/modules.config`), otherwise its own last digits depend on the CPU. The dupMatrix is
-  byte-identical on every dataset with an upstream reference.
 - **dupRadar on `hs_chr22_pe_fwd`**: upstream dupRadar exits with an error (6 genes), so the
   dataset marks `dupradar: upstream_error`.
+
+DupRadar matrices and fitted intercept and slope files are checked by MD5 against references
+generated with R 4.4.3 and netlib BLAS 3.11.0.
 
 The `small` set runs on every pull request. The `large` set runs on pushes to `main`, on
 releases, on the weekly schedule and in the `large` manual mode, never on pull requests
