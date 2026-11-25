@@ -86,9 +86,7 @@ nextflow_process {
                 "dupMatrix.txt differs from upstream dupRadar"
 
             // intercept/slope: byte-identical to dupRadar (R's cat(): 15 significant
-            // digits, a space after the intercept). The upstream reference is made with
-            // OpenBLAS pinned to its generic kernels (conf/modules.config), without which its
-            // last digits depend on the CPU.
+            // digits, a space after the intercept). The upstream reference uses netlib BLAS.
             assert path(slopeFile).md5 == path("${upstreamDir}/intercept_slope.txt").md5 : \
                 "intercept_slope.txt differs from upstream dupRadar:\n" +
                 "  RustQC:   ${path(slopeFile).readLines()}\n" +

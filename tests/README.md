@@ -178,7 +178,7 @@ junction motifs, GTF2BED's tied transcripts).
 | **inner_distance**         | `snapshot({distance, freq})`   | **md5** (both files)                                                             | Byte-identical, row order included                                                                     |
 | **junction_annotation**    | `snapshot({bed sorted, xls})`  | **md5** (BED, XLS) + `textMatch` (Interact BED, log)                             | BED/XLS byte-identical; Interact BED and log identical except lines naming the input BAM / annotation  |
 | **junction_saturation**    | `snapshot(lines)`              | **md5** (R script)                                                               | Byte-identical at every sampling point (seed 1: patched RSeQC module, `--junction-saturation-seed 1`)  |
-| **dupradar**               | `snapshot({matrix, slope})`    | **md5** (matrix, intercept/slope)                                                | Byte-identical; upstream run with OpenBLAS pinned to its generic kernels (see below)                   |
+| **dupradar**               | `snapshot({matrix, slope})`    | **md5** (matrix, intercept/slope)                                                | Byte-identical; upstream run with netlib BLAS (see below)                                             |
 | **featurecounts**          | `snapshot({counts, summary})`  | Exact biotype counts + **md5** (biotype summary)                                 | All 14 biotypes identical; biotype-level summary byte-identical to `-g gene_biotype`                   |
 | **featurecounts per-gene** | (shared with featurecounts)    | `exactMatch` (all but `# Program:`), **md5** (summary)                           | Identical for all 2,905 genes, per-exon Chr/Start/End/Strand lists in Subread's order included         |
 | **preseq**                 | `snapshot(lines)`              | **md5**                                                                          | Byte-identical on Linux (same C++ RNG, seed 408). Differs on macOS (libc++), so valid on Linux CI only |
@@ -206,11 +206,9 @@ Comparisons fall into three categories:
      between the committed reference and tin.py on another CPU. Rows are matched by transcript, values at
      1e-12 relative.
 
-**Upstream dupRadar and OpenBLAS.** The dupRadar container ships OpenBLAS built with run-time CPU
-dispatch, so R's fitted intercept/slope changed in the last digits with the runner's CPU.
-`conf/modules.config` sets `OPENBLAS_CORETYPE=Prescott` (generic kernels) and `OPENBLAS_NUM_THREADS=1`
-for every task, which makes upstream dupRadar the same on every machine; the references were generated
-that way.
+**Upstream dupRadar and netlib BLAS.** The dupRadar module pins R 4.4.3 and the netlib
+reference BLAS 3.11.0. The fitted intercept and slope are byte-identical to RustQC with this
+reference. The container and Conda dependency file use the same pins.
 
 **Reference files are upstream bytes.** `snapshots/` is excluded from the whitespace pre-commit hooks
 and from Prettier, so committed references keep the upstream tools' trailing spaces and final newlines.
